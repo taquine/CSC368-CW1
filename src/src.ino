@@ -70,17 +70,17 @@ void setup() {
 
 void loop() {
     delay(5000);
-    Serial.println(getTempJSON);
+    Serial.println(getTempJSON());
     delay(5000);
-    Serial.println(getTempJSON);
+    Serial.println(getTempJSON());
     delay(5000);
-    Serial.println(getTempJSON);
+    Serial.println(getTempJSON());
     delay(5000);
-    Serial.println(getTempJSON);
+    Serial.println(getTempJSON());
     delay(5000);
-    Serial.println(getTempJSON);
+    Serial.println(getTempJSON());
     delay(5000);
-    Serial.println(getTempJSON);
+    Serial.println(getTempJSON());
     s_con.sendJSON(test_payload);
 
 }
