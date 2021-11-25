@@ -40,13 +40,13 @@ String getTempJSON() {
 }
 
 float getAvg() {
-    float sum;
+    float sum = 0.0;
 
     for (int i = 0; i < 30; ++i) {
         sum += tempsForAvg[i];
     }
 
-    return sum/30;
+    return sum / 30.0;
 }
 
 void sendPayload(String payload) {
