@@ -19,7 +19,8 @@ const char* gid = "Nx4gVDM1";
 
 dotDevice s_con(ssid, password, server);
 
-float temp_in_c; //the current temp
+float temp_in_c; //the current temp [MIGHT BE USELESS]
+unsigned long payloadTimeSent;  //the time payload last sent to be able to timestamp readings
 
 const String test_payload = "{\"device\": \"Nx4gVDM1\","
     "\"average\": 19.4,"
@@ -48,11 +49,17 @@ float getTemp() {
 
 // TODO: IMPLEMENT CLOCK LIKE FROM THE lab5? ######################################################
 int getTime() {
-    return 0;
+    return payloadTimeSent - millis();
 }
 
 String getTempJSON() {
     return "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(getTemp()) + "}";
+}
+
+void sendPayload(String payload) {
+    s_con.sendJSON(payload); //change to bin protocol later
+    payloadTimeSent = millis();
+    return;
 }
 
 void setup() {
@@ -62,14 +69,18 @@ void setup() {
 }
 
 void loop() {
-    //sensors.requestTemperatures();
-    //temp_in_c = sensors.getTempCByIndex(0);
-    delay(10000);
-    Serial.print("10s....");
-    delay(10000);
-    Serial.print("20s....");
-    delay(10000);
-    Serial.println("sending payload");
+    delay(5000);
+    Serial.println(getTempJSON);
+    delay(5000);
+    Serial.println(getTempJSON);
+    delay(5000);
+    Serial.println(getTempJSON);
+    delay(5000);
+    Serial.println(getTempJSON);
+    delay(5000);
+    Serial.println(getTempJSON);
+    delay(5000);
+    Serial.println(getTempJSON);
     s_con.sendJSON(test_payload);
 
 }
