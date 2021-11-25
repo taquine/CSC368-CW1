@@ -17,48 +17,43 @@ const char* password = "xjKghgtY5rcc";
 const char* server = "ws://ec2-52-15-138-171.us-east-2.compute.amazonaws.com:1234"; 
 const char* gid = "Nx4gVDM1";
 
-dotDevice s_con(ssid, password, server);
+dotDevice s_con(ssid, password, server); //connection object
 
-float temp_in_c; //the current temp [MIGHT BE USELESS]
+float tempsForAvg[30];
+int tmpCntr;
+
 unsigned long payloadTimeSent;  //the time payload last sent to be able to timestamp readings
-
-const String test_payload = "{\"device\": \"Nx4gVDM1\","
-    "\"average\": 19.4,"
-    "\"values\":["
-    "{\"timestamp\" : 1034, \"value\": 19.5},"
-    "{\"timestamp\" : 1134, \"value\": 19.4},"
-    "{\"timestamp\" : 1234, \"value\": 19.2},"
-    "{\"timestamp\" : 1334, \"value\": 19.4},"
-    "{\"timestamp\" : 1434, \"value\": 19.5},"
-    "{\"timestamp\" : 1534, \"value\": 19.4},"
-    "{\"timestamp\" : 1634, \"value\": 19.2},"
-    "{\"timestamp\" : 1734, \"value\": 19.5},"
-    "{\"timestamp\" : 1834, \"value\": 19.4},"
-    "{\"timestamp\" : 1934, \"value\": 19.2},"
-    "{\"timestamp\" : 2034, \"value\": 19.5},"
-    "{\"timestamp\" : 2134, \"value\": 19.4},"
-    "{\"timestamp\" : 2234, \"value\": 19.2},"
-    "{\"timestamp\" : 2334, \"value\": 19.5},"
-    "{\"timestamp\" : 2434, \"value\": 19.4},"
-    "{\"timestamp\" : 2534, \"value\": 19.2}]}";
 
 float getTemp() {
     sensors.requestTemperatures();
     return sensors.getTempCByIndex(0);
 }
 
-// TODO: IMPLEMENT CLOCK LIKE FROM THE lab5? ######################################################
 int getTime() {
     return millis() - payloadTimeSent;
 }
 
 String getTempJSON() {
-    return "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(getTemp()) + "}";
+    tempsForAvg[tmpCntr] = getTemp
+    tmpCntr += 1;
+    return "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(tempsForAvg[tmpCntr-1]) + "}";
+}
+
+float getAvg() {
+    float sum;
+
+    for (int i = 0; i < 30; ++i) {
+        sum += tempsForAvg[i];
+    }
+
+    return sum/30;
 }
 
 void sendPayload(String payload) {
     s_con.sendJSON(payload); //change to bin protocol later
     payloadTimeSent = millis();
+    tempsForAvg = {};
+    tmpCntr = 0;
     return;
 }
 
@@ -66,21 +61,17 @@ void setup() {
     Serial.begin(115200);
     Serial.println("CONNECTING");
     s_con.connect();
+
+    tmpCntr = 0;
+    tempsForAvg = {};
 }
 
 void loop() {
-    delay(5000);
-    Serial.println(getTempJSON());
-    delay(5000);
-    Serial.println(getTempJSON());
-    delay(5000);
-    Serial.println(getTempJSON());
-    delay(5000);
-    Serial.println(getTempJSON());
-    delay(5000);
-    Serial.println(getTempJSON());
-    delay(5000);
-    Serial.println(getTempJSON());
+    for (int i; i <= 30; ++i){
+        Serial.println(getTempJSON());
+        delay(1000);
+    }
+    Serial.println(String(getAvg()));
     s_con.sendJSON(test_payload);
 
 }
