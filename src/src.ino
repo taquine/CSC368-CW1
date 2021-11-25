@@ -34,7 +34,7 @@ int getTime() {
 }
 
 String getTempJSON() {
-    tempsForAvg[tmpCntr] = getTemp
+    tempsForAvg[tmpCntr] = getTemp();
     tmpCntr += 1;
     return "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(tempsForAvg[tmpCntr-1]) + "}";
 }
@@ -52,7 +52,7 @@ float getAvg() {
 void sendPayload(String payload) {
     s_con.sendJSON(payload); //change to bin protocol later
     payloadTimeSent = millis();
-    tempsForAvg = {};
+
     tmpCntr = 0;
     return;
 }
@@ -62,8 +62,7 @@ void setup() {
     Serial.println("CONNECTING");
     s_con.connect();
 
-    tmpCntr = 0;
-    tempsForAvg = {};
+
 }
 
 void loop() {
@@ -72,6 +71,6 @@ void loop() {
         delay(1000);
     }
     Serial.println(String(getAvg()));
-    s_con.sendJSON(test_payload);
+    sendPayload("");
 
 }
