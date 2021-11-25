@@ -49,7 +49,7 @@ float getTemp() {
 
 // TODO: IMPLEMENT CLOCK LIKE FROM THE lab5? ######################################################
 int getTime() {
-    return payloadTimeSent - millis();
+    return millis() - payloadTimeSent;
 }
 
 String getTempJSON() {
