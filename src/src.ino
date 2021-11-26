@@ -39,8 +39,8 @@ int getTime() {
 void getTempJSON() {
     String jsonReading;
     tempsForAvg[tmpCntr] = getTemp();
-    jsonReading = "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(tempsForAvg[tmpCntr-1]) + "}";
-    if (tmpCntr == 29) {
+    jsonReading = "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(tempsForAvg[tmpCntr]) + "}";
+    if (tmpCntr == 15) {
       temperaturePayload += jsonReading + "]}";
     } else {
       temperaturePayload += jsonReading + ",";
@@ -52,11 +52,11 @@ void getTempJSON() {
 float getAvg() {
     float sum = 0.0;
 
-    for (int i = 0; i < 30; ++i) {
+    for (int i = 0; i <= 15; ++i) {
         sum += tempsForAvg[i];
     }
 
-    return sum / 30.0;
+    return sum / 16.0;
 }
 
 String buildPayload() {
@@ -66,26 +66,21 @@ String buildPayload() {
 void sendPayload(String payload) {
     s_con.sendJSON(payload); //change to bin protocol later
     payloadTimeSent = millis();
-    Serial.println(payload);
     tmpCntr = 0;
+    temperaturePayload = "";
     return;
 }
 
 void setup() {
-    Serial.begin(115200);
-    Serial.println("CONNECTING");
     s_con.connect();
-
-
 }
 
 void loop() {
-    tmpCntr = 0;
-    for (int i = 0; i < 30; ++i){
+    for (int i = 0; i <= 15; ++i){
         getTempJSON();
         delay(100);
     }
-    
+    delay(18000);
     sendPayload(buildPayload());
 
 }
