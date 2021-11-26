@@ -22,6 +22,9 @@ dotDevice s_con(ssid, password, server); //connection object
 float tempsForAvg[30];
 int tmpCntr;
 
+String temperaturePayload;
+
+
 unsigned long payloadTimeSent;  //the time payload last sent to be able to timestamp readings
 
 float getTemp() {
@@ -33,10 +36,17 @@ int getTime() {
     return millis() - payloadTimeSent;
 }
 
-String getTempJSON() {
+void getTempJSON() {
+    String jsonReading;
     tempsForAvg[tmpCntr] = getTemp();
+    jsonReading = "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(tempsForAvg[tmpCntr-1]) + "}";
+    if (tmpCntr == 29) {
+      temperaturePayload += jsonReading + "]}";
+    } else {
+      temperaturePayload += jsonReading + ",";
+    }
     tmpCntr += 1;
-    return "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(tempsForAvg[tmpCntr-1]) + "}";
+    return;
 }
 
 float getAvg() {
@@ -49,10 +59,14 @@ float getAvg() {
     return sum / 30.0;
 }
 
+String buildPayload() {
+    return "{\"device\": \"Nx4gVDM1\",\"average\": " + String(getAvg()) + ",\"values\":[" + temperaturePayload;
+}
+
 void sendPayload(String payload) {
     s_con.sendJSON(payload); //change to bin protocol later
     payloadTimeSent = millis();
-
+    Serial.println(payload);
     tmpCntr = 0;
     return;
 }
@@ -66,11 +80,12 @@ void setup() {
 }
 
 void loop() {
-    for (int i; i <= 30; ++i){
-        Serial.println(getTempJSON());
-        delay(1000);
+    tmpCntr = 0;
+    for (int i = 0; i < 30; ++i){
+        getTempJSON();
+        delay(100);
     }
-    Serial.println(String(getAvg()));
-    sendPayload("");
+    
+    sendPayload(buildPayload());
 
 }
