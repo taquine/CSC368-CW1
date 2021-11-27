@@ -8,6 +8,7 @@
 #include "dotDevice.h"
 #include "OneWire.h"
 #include "DallasTemperature.h"
+#define mS_TO_S_FACTOR 1000  // Conversion factor for milli-seconds to seconds
 
 OneWire oneWire(26);
 DallasTemperature sensors(&oneWire);
@@ -22,32 +23,6 @@ dotDevice s_con(ssid, password, server); //connection object
 float tempsForAvg[30];
 int tmpCntr;
 
-String temperaturePayload;
-
-
-unsigned long payloadTimeSent;  //the time payload last sent to be able to timestamp readings
-
-float getTemp() {
-    sensors.requestTemperatures();
-    return sensors.getTempCByIndex(0);
-}
-
-int getTime() {
-    return millis() - payloadTimeSent;
-}
-
-void getTempJSON() {
-    String jsonReading;
-    tempsForAvg[tmpCntr] = getTemp();
-    jsonReading = "{\"timestamp\" : " + String(getTime()) + ", \"value\": " + String(tempsForAvg[tmpCntr]) + "}";
-    if (tmpCntr == 15) {
-      temperaturePayload += jsonReading + "]}";
-    } else {
-      temperaturePayload += jsonReading + ",";
-    }
-    tmpCntr += 1;
-    return;
-}
 
 float getAvg() {
     float sum = 0.0;
@@ -59,16 +34,36 @@ float getAvg() {
     return sum / 16.0;
 }
 
-String buildPayload() {
-    return "{\"device\": \"Nx4gVDM1\",\"average\": " + String(getAvg()) + ",\"values\":[" + temperaturePayload;
+float getTemp() {
+    sensors.requestTemperatures();
+
+    return sensors.getTempCByIndex(0);
 }
 
-void sendPayload(String payload) {
-    s_con.sendJSON(payload); //change to bin protocol later
-    payloadTimeSent = millis();
+String getTempJSON() {
+    String jsonReading;
+
+    for (int i = 0; i <=15; ++i){
+        tempsForAvg[i] = getTemp();
+        jsonReading += "{\"timestamp\" : " + String(millis()) + ", \"value\": " + String(tempsForAvg[tmpCntr]) + "}";
+        if (i < 15){
+            jsonReading += ",";
+        } else {
+            jsonReading += "]}";
+        }
+        tmpCntr += 1;
+    }
+
+    return jsonReading;
+}
+
+String buildPayload() {
+    String tmpData = getTempJSON(); //add temp readings (had to do this b4 so the average was right)
+    String payload = "{\"device\": \"Nx4gVDM1\",\"average\": " + String(getAvg()) + ",\"values\":[";
+    payload += tmpData;
     tmpCntr = 0;
-    temperaturePayload = "";
-    return;
+
+    return payload;
 }
 
 void setup() {
@@ -76,11 +71,10 @@ void setup() {
 }
 
 void loop() {
-    for (int i = 0; i <= 15; ++i){
-        getTempJSON();
-        delay(100);
-    }
-    delay(18000);
-    sendPayload(buildPayload());
+    s_con.sendJSON(payload);
+    delay(50);
+
+    esp_sleep_enable_timer_wakeup((30000 - millis()) * mS_TO_S_FACTOR); //no idea why this doesnt get a consistent result
+    esp_deep_sleep_start();
 
 }
