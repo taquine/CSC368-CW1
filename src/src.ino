@@ -71,6 +71,7 @@ void setup() {
 }
 
 void loop() {
+    String payload = buildPayload();
     s_con.sendJSON(payload);
     delay(50);
 
