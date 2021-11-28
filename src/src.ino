@@ -1,16 +1,20 @@
 /*
-    EmSys Cw1 - Low Powered IoT node
+        EmSys Cw1 - Low Powered IoT node
     
     Fung Wah Westley - 1901519
     Karim Stefan Nouda - 1914729
 
 */
+typedef uint16_t fixed_point_t;
+
 #include "dotDevice.h"
 #include "OneWire.h"
 #include "DallasTemperature.h"
-#define mS_TO_S_FACTOR 1000  // Conversion factor for milli-seconds to seconds
 
-OneWire oneWire(26);
+#define mS_TO_S_FACTOR 1000  // Conversion factor for milli-seconds to seconds
+#define FIXED_POINT_FRACTIONAL_BITS 8 //amount of bits dedicated to the fractional section
+
+OneWire oneWire(26); //set up the oneWire protocol on pin 26
 DallasTemperature sensors(&oneWire);
 
 const char* ssid = "VM4273021";
@@ -20,9 +24,33 @@ const char* gid = "Nx4gVDM1";
 
 dotDevice s_con(ssid, password, server); //connection object
 
-float tempsForAvg[30];
-int tmpCntr;
+float tempsForAvg[16]; // list of recent temps to be used for the average
 
+
+struct tempPayload { //total of 76 bytes
+    char[8] gid = "Nx4gVDM1"; //8 bytes (1 per char)
+
+    uint16_t cmd = 1; //2 bytes
+    uint16_t average; //2 bytes
+
+    uint16_t readings[32]; // 16 * (2 bytes for time + 2 bytes for fixed point temp) even:time odd:temp
+};
+
+uint16_t floating_to_fixed(float inp) {
+    return (uint16_t)(round(inp * (1 << FIXED_POINT_FRACTIONAL_BITS)));
+}
+
+struct tempPayload getBINpayload() {
+    struct tempPayload result;
+
+    for (int i = 0; i <=30; i++){
+        result.readings[i] = millis();
+        tempsForAvg[i] = getTemp();
+        result.readings[i+1] = floating_to_fixed(tempsForAvg[i]);
+    }
+    result.average = floating_to_fixed(getAvg());
+    return result;
+}
 
 float getAvg() {
     float sum = 0.0;
@@ -51,7 +79,6 @@ String getTempJSON() {
         } else {
             jsonReading += "]}";
         }
-        tmpCntr += 1;
     }
 
     return jsonReading;
@@ -61,7 +88,6 @@ String buildPayload() {
     String tmpData = getTempJSON(); //add temp readings (had to do this b4 so the average was right)
     String payload = "{\"device\": \"Nx4gVDM1\",\"average\": " + String(getAvg()) + ",\"values\":[";
     payload += tmpData;
-    tmpCntr = 0;
 
     return payload;
 }
@@ -71,8 +97,7 @@ void setup() {
 }
 
 void loop() {
-    String payload = buildPayload();
-    s_con.sendJSON(payload);
+    s_con.sendBIN(getBINpayload());
     delay(50);
 
     esp_sleep_enable_timer_wakeup((30000 - millis()) * mS_TO_S_FACTOR); //no idea why this doesnt get a consistent result
