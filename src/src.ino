@@ -15,41 +15,46 @@ typedef uint16_t fixed_point_t;
 #define FIXED_POINT_FRACTIONAL_BITS 8 //amount of bits dedicated to the fractional section
 
 OneWire oneWire(26); //set up the oneWire protocol on pin 26
+
 DallasTemperature sensors(&oneWire);
 
-const char* ssid = "VM4273021";
-const char* password = "xjKghgtY5rcc";
-const char* server = "ws://ec2-52-15-138-171.us-east-2.compute.amazonaws.com:1234"; 
+const char* ssid = "NETGEAR35";
+const char* password = "magicalfinch482";
+const char* server = "ws://192.168.1.2:1234"; 
 const char* gid = "Nx4gVDM1";
 
 dotDevice s_con(ssid, password, server); //connection object
 
 float tempsForAvg[16]; // list of recent temps to be used for the average
 
-
-struct tempPayload { //total of 76 bytes
-    char[8] gid = "Nx4gVDM1"; //8 bytes (1 per char)
-
-    uint16_t cmd = 1; //2 bytes
-    uint16_t average; //2 bytes
-
-    uint16_t readings[32]; // 16 * (2 bytes for time + 2 bytes for fixed point temp) even:time odd:temp
+struct reading
+{
+    uint16_t time;
+    uint16_t temp;
 };
+
+
+#pragma pack(1)
+struct tempPayload { //total of 76 bytes
+    char gid[8] = {'N','x','4','g','V','D','M','1'}; //8 bytes (1 per char)
+    uint16_t cmd = 1; //2 bytes
+    uint16_t avg; //2 bytes
+    struct reading values[16]; // 16 * (2 bytes for time + 2 bytes for fixed point temp) even:time odd:temp
+}data_packet;
+#pragma pop(1)
 
 uint16_t floating_to_fixed(float inp) {
     return (uint16_t)(round(inp * (1 << FIXED_POINT_FRACTIONAL_BITS)));
 }
 
-struct tempPayload getBINpayload() {
-    struct tempPayload result;
-
-    for (int i = 0; i <=30; i++){
-        result.readings[i] = millis();
+void getBINpayload() {
+    for (int i = 0; i <16; ++i){
+        data_packet.values[i].time = (uint16_t)millis();
         tempsForAvg[i] = getTemp();
-        result.readings[i+1] = floating_to_fixed(tempsForAvg[i]);
+        data_packet.values[i].temp = floating_to_fixed(tempsForAvg[i]);
     }
-    result.average = floating_to_fixed(getAvg());
-    return result;
+    data_packet.avg = floating_to_fixed(getAvg());
+    return;
 }
 
 float getAvg() {
@@ -73,7 +78,7 @@ String getTempJSON() {
 
     for (int i = 0; i <=15; ++i){
         tempsForAvg[i] = getTemp();
-        jsonReading += "{\"timestamp\" : " + String(millis()) + ", \"value\": " + String(tempsForAvg[tmpCntr]) + "}";
+        jsonReading += "{\"timestamp\" : " + String(millis()) + ", \"value\": " + String(tempsForAvg[i]) + "}";
         if (i < 15){
             jsonReading += ",";
         } else {
@@ -97,8 +102,9 @@ void setup() {
 }
 
 void loop() {
-    s_con.sendBIN(getBINpayload());
-    delay(50);
+    getBINpayload();
+    s_con.sendBIN((char*)&data_packet,sizeof(data_packet));
+    delay(10);
 
     esp_sleep_enable_timer_wakeup((30000 - millis()) * mS_TO_S_FACTOR); //no idea why this doesnt get a consistent result
     esp_deep_sleep_start();
